@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blizzard AI</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-image: url("/static/images/background-image.jpg");
+            font-family: Arial, sans-serif;
+            margin: 0;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            padding: 10px;
+            background-color: rgba(59, 169, 231, 0.7);
+            color: white;
+            text-align: center;
+            font-size: 1.5em;
+        }
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ddd;
+        }
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .message .content {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 5px;
+        }
+        .message.user .content {
+            background-color: #0b7b9a;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+        .message.bot .content {
+            background-color: #f1f1f1;
+            color: black;
+            border-bottom-left-radius: 0;
+        }
+        .input-container {
+            display: flex;
+            border-top: 1px solid #ddd;
+            padding: 10px;
+        }
+        .input-container input {
+            flex: 1;
+            padding: 10px;
+            border: double;
+            border-color: rgba(59, 169, 231, 0.7);
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 6px 6px #ccf2ff;
+            transform: translate(-4px, -4px);
+        }
+        .input-container button {
+            font-family: Arial Unicode MS;
+            font-size: 15px;
+            margin-left: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: rgba(59, 169, 231, 0.7);
+            color: white;
+            cursor: pointer;
+            box-shadow: 6px 6px #ccf2ff;
+            transition: box-shadow .2s, transform .2s;
+            display: grid;
+            transform: translate(-4px, -4px);
+        }
+        .input-container button:hover {
+            transform: translate(3px, 0px);
+            box-shadow: 0px 4px #ccf2ff;
+        }
+        .input-container button:active {
+            background-color: rgb(250, 23, 23);
+        }
+        .bg-logo {
+            background: url('/static/images/image.png');
+            background-size: cover;
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <center><img src="/static/images/header-image.jpg" alt="Blizzard" length="800px" width="400px" style="border-radius: 20px;"><br></center>
+        <div class="chat-container">
+            <div class="header" style="font-family: DigifaceWide;">Blizzard AI</div>
+            <div class="messages" id="messages">
+                <!-- Render chat history here -->
+                {% if session['chat_history'] %}
+                    {% for entry in session['chat_history'] %}
+                        <div class="message {{ entry['role'] }}">
+                            <div class="content">{{ entry['content'] }}</div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <div class="input-container">
+                <input type="text" id="userInput" placeholder="Type a message..." onkeypress="if(event.keyCode == 13) sendMessage()">
+                <button onclick="sendMessage()">Send</button>
+                <button onclick="clearChat()">Clear Chat</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        function sendMessage() {
+            const userInput = document.getElementById('userInput').value;
+            if (userInput.trim() === '') return;
+
+            const messagesDiv = document.getElementById('messages');
+
+            // Add user's message to the chat
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.classList.add('message', 'user');
+            userMessageDiv.innerHTML = `<div class="content">${userInput}</div>`;
+            messagesDiv.appendChild(userMessageDiv);
+
+            // Scroll to the bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            // Send message to the server
+            fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `query=${encodeURIComponent(userInput)}`,
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Add bot's response to the chat
+                const botMessageDiv = document.createElement('div');
+                botMessageDiv.classList.add('message', 'bot');
+                botMessageDiv.innerHTML = `<div class="content">${data.answer}</div>`;
+                messagesDiv.appendChild(botMessageDiv);
+
+                // Scroll to the bottom
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            })
+            .catch(error => console.error('Error:', error));
+
+            // Clear input field
+            document.getElementById('userInput').value = '';
+        }
+
+        function clearChat() {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = '';
+            // Clear the session chat history
+            fetch('/clear_chat', {
+                method: 'POST',
+            }).then(() => console.log('Chat history cleared.'));
+        }
+    </script>
+</body>
+</html>
